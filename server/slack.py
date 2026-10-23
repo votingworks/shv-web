@@ -1,5 +1,7 @@
 import requests
 
+from .certified_images import CERTIFIED_IMAGE_HASHES
+
 def markdown(text):
     return { "type": "mrkdwn", "text": text }
 
@@ -13,6 +15,15 @@ def log_success_to_slack(
     else:
         header_text = ":white_check_mark: Validation succeeded"
 
+    context_elements = [
+        markdown(f":label: {success_result['machine_id']}"),
+        markdown(f":cd: {success_result['software_version']}"),
+        markdown(f":hash: {success_result['system_hash']}")
+    ]
+    certified_machine = CERTIFIED_IMAGE_HASHES.get(success_result.get("system_hash"))
+    if certified_machine:
+        context_elements.append(markdown(f":approved: EAC-certified {certified_machine} image"))
+
     response = requests.post(
         slack_webhook_url,
         headers={"Content-Type": "application/json"},
@@ -25,11 +36,7 @@ def log_success_to_slack(
                 },
                 {
                     "type": "context",
-                    "elements": [
-                        markdown(f":label: {success_result['machine_id']}"),
-                        markdown(f":cd: {success_result['software_version']}"),
-                        markdown(f":hash: {success_result['system_hash']}")
-                    ],
+                    "elements": context_elements,
                 }
             ]
         }
